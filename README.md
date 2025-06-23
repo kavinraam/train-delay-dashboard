@@ -24,7 +24,7 @@ The dashboard enables railway authorities to explore historical train delay patt
 | `train_info.csv` | General train metadata |
 | `train_schedule.csv` | Schedule and route information |
 | `train delay data.csv` | Historical delay dataset |
-| `cris_logo.png` | CRIS logo for branding |
+| `logo_cris.png` | CRIS logo for branding |
 | `requirements.txt` | Python dependencies |
 
 ## License
