@@ -4,7 +4,6 @@ Created on Mon Jun 23 14:57:33 2025
 
 @author: kavin
 """
-
 import streamlit as st
 import pandas as pd
 import seaborn as sns
@@ -15,10 +14,13 @@ import numpy as np
 from PIL import Image
 
 st.set_page_config(page_title="Train Delay Dashboard", layout="wide")
-st.title("Train Delay Analysis & Prediction Dashboard")
 
 cris_logo = Image.open("logo_cris.png")
-st.image(cris_logo, width=150, caption="Centre for Railway Information Systems")
+col_logo, col_title = st.columns([1, 6])
+with col_logo:
+    st.image(cris_logo, width=100)
+with col_title:
+    st.title("Train Delay Analysis & Prediction Dashboard")
 
 @st.cache_data
 def load_data():
@@ -65,6 +67,7 @@ if section == "EDA":
     fig3, ax3 = plt.subplots()
     sns.barplot(data=ontime_by_type, x='Train Type', y='On_Time (%)', ax=ax3, palette='YlGn')
     ax3.set_title("On-Time % by Train Type")
+    ax3.set_ylim(0, 100)
     st.pyplot(fig3)
 
     st.subheader("On-Time Percentage by Day of the Week")
@@ -73,6 +76,7 @@ if section == "EDA":
     fig4, ax4 = plt.subplots()
     sns.lineplot(data=ontime_by_day, x='Day of the Week', y='On_Time (%)', marker='o', color='green', ax=ax4)
     ax4.set_title("On-Time % by Day")
+    ax4.set_ylim(0, 100)
     st.pyplot(fig4)
 
 elif section == "Route Performance":
@@ -115,7 +119,7 @@ elif section == "Delay Prediction":
     model = RandomForestRegressor(n_estimators=100, random_state=42)
     model.fit(X_train, y_train)
 
-    st.subheader("Enter Train Details for Prediction")
+    st.subheader("Enter Train Conditions")
 
     col1, col2, col3 = st.columns(3)
 
@@ -132,14 +136,22 @@ elif section == "Delay Prediction":
         distance = st.slider("Distance (km)", 10, 1000, 200)
 
     if st.button("Predict Delay"):
-        sample = {
-            'Weather Conditions': label_encoders['Weather Conditions'].transform([weather])[0],
-            'Day of the Week': label_encoders['Day of the Week'].transform([day])[0],
-            'Time of Day': label_encoders['Time of Day'].transform([time_of_day])[0],
-            'Train Type': label_encoders['Train Type'].transform([train_type])[0],
-            'Route Congestion': label_encoders['Route Congestion'].transform([congestion])[0],
-            'Distance Between Stations (km)': distance
-        }
-        sample_df = pd.DataFrame([sample])
-        prediction = model.predict(sample_df)[0]
-        st.success(f"Predicted Delay: {round(prediction)} minutes")
+        try:
+            sample = {
+                'Weather Conditions': label_encoders['Weather Conditions'].transform([weather])[0],
+                'Day of the Week': label_encoders['Day of the Week'].transform([day])[0],
+                'Time of Day': label_encoders['Time of Day'].transform([time_of_day])[0],
+                'Train Type': label_encoders['Train Type'].transform([train_type])[0],
+                'Route Congestion': label_encoders['Route Congestion'].transform([congestion])[0],
+                'Distance Between Stations (km)': distance
+            }
+
+            sample_df = pd.DataFrame([sample])
+            sample_df = sample_df[X.columns]
+
+            prediction = model.predict(sample_df)[0]
+            st.success(f"Predicted Delay: {round(prediction)} minutes")
+
+        except Exception as e:
+            st.error(f"Prediction failed: {str(e)}")
+
