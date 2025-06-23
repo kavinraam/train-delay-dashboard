@@ -79,22 +79,29 @@ if section == "EDA":
 elif section == "Route Performance":
     st.header("Route Performance Metrics")
 
-    st.subheader("Number of Stops per Train")
-    stops = schedule_df.groupby('Train_No')['Station_Code'].count().reset_index(name='Num_Stops')
-    top_stops = stops.sort_values(by='Num_Stops', ascending=False).head(10)
-    fig5, ax5 = plt.subplots()
-    sns.barplot(data=top_stops, x='Train_No', y='Num_Stops', ax=ax5, palette='Blues')
-    ax5.set_title("Top 10 Trains with Most Stops")
-    st.pyplot(fig5)
+    st.subheader("Train Route Summary")
 
-    st.subheader("Longest Distance Trains")
-    distance_df = schedule_df.groupby('Train_No')['Distance'].last().reset_index()
-    distance_df['Distance'] = pd.to_numeric(distance_df['Distance'], errors='coerce')
-    top_distance = distance_df.sort_values(by='Distance', ascending=False).head(10)
-    fig6, ax6 = plt.subplots()
-    sns.barplot(data=top_distance, x='Train_No', y='Distance', ax=ax6, palette='Purples')
-    ax6.set_title("Top 10 Longest Distance Trains")
-    st.pyplot(fig6)
+    route_summary = schedule_df.groupby('Train_No').agg(
+        Number_of_Stops=('Station_Code', 'count'),
+        Total_Distance=('Distance', 'max'),
+        Start_Station=('Station_Code', 'first'),
+        End_Station=('Station_Code', 'last')
+    ).reset_index()
+
+    merged_df = pd.merge(info_df, route_summary, left_on='Train Number', right_on='Train_No', how='inner')
+
+    st.write("### Top 10 Longest Routes")
+    top_routes = merged_df.sort_values(by="Total_Distance", ascending=False).head(10)
+    st.dataframe(top_routes[['Train Number', 'Train Name', 'Type', 'Start_Station', 'End_Station', 'Total_Distance']])
+
+    st.write("### Top 10 Trains by Number of Stops")
+    top_stops = merged_df.sort_values(by="Number_of_Stops", ascending=False).head(10)
+    st.dataframe(top_stops[['Train Number', 'Train Name', 'Type', 'Number_of_Stops']])
+
+    st.write("### Average Stops by Train Type")
+    stops_chart = merged_df.groupby("Type")["Number_of_Stops"].mean().sort_values()
+    st.bar_chart(stops_chart)
+
 
 elif section == "Delay Prediction":
     st.header("Train Delay Prediction")
