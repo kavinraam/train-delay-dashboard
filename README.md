@@ -33,5 +33,4 @@ This project was developed as part of a internship at CRIS (Centre for Railway I
 
 ## Author
 
-Kavin Raam M
-LinkedIn: linkedin.com/in/kavinraam
+Kavin Raam M | LinkedIn: linkedin.com/in/kavinraam
