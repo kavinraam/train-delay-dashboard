@@ -16,11 +16,7 @@ from PIL import Image
 st.set_page_config(page_title="Train Delay Dashboard", layout="wide")
 
 cris_logo = Image.open("logo_cris.png")
-col_logo, col_title = st.columns([1, 6])
-with col_logo:
-    st.image(cris_logo, width=100)
-with col_title:
-    st.title("Train Delay Analysis & Prediction Dashboard")
+st.title("Train Delay Analysis & Prediction Dashboard")
 
 @st.cache_data
 def load_data():
