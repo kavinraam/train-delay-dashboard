@@ -125,7 +125,7 @@ elif section == "Delay Prediction":
 
     if 'Train_No' in info_df.columns:
         train_no_list = sorted(info_df['Train_No'].dropna().astype(str).unique())
-        selected_train = st.selectbox("Select Train Number (optional)", ["Manual Entry"] + list(train_no_list))
+        selected_train = st.selectbox("Select Train Number", ["Manual Entry"] + list(train_no_list))
     else:
         st.warning("Train_No column not found in train_info.csv")
         selected_train = "Manual Entry"
