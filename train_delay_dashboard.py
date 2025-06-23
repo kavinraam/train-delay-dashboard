@@ -59,21 +59,28 @@ if section == "Delay Prediction":
 
     st.subheader("Enter Train Conditions")
 
-    train_no_list = sorted(info_df['Train Number'].dropna().astype(str).unique())
-    selected_train = st.selectbox("Select Train Number (optional)", ["Manual Entry"] + list(train_no_list))
+    # ✅ Use 'Train_No' instead of 'Train Number'
+    if 'Train_No' in info_df.columns:
+        train_no_list = sorted(info_df['Train_No'].dropna().astype(str).unique())
+        selected_train = st.selectbox("Select Train Number (optional)", ["Manual Entry"] + list(train_no_list))
+    else:
+        st.warning("Train_No column not found in train_info.csv")
+        selected_train = "Manual Entry"
 
     default_type = None
     default_distance = 200
 
     if selected_train != "Manual Entry":
         try:
-            train_data = info_df[info_df['Train Number'].astype(str) == selected_train].iloc[0]
+            train_data = info_df[info_df['Train_No'].astype(str) == selected_train].iloc[0]
             default_type = train_data.get('Type', None)
-            default_distance = schedule_df[schedule_df['Train_No'].astype(str) == selected_train]['Distance'].max()
-            if pd.isna(default_distance):
-                default_distance = 200
-        except:
-            st.warning("Train details not found. Please proceed with manual inputs.")
+
+            distance_value = schedule_df[schedule_df['Train_No'].astype(str) == selected_train]['Distance'].max()
+            default_distance = int(distance_value) if not pd.isna(distance_value) else 200
+        except Exception as e:
+            st.warning("Train details not found or error occurred.")
+            default_type = None
+            default_distance = 200
 
     col1, col2, col3 = st.columns(3)
 
@@ -110,3 +117,4 @@ if section == "Delay Prediction":
 
         except Exception as e:
             st.error(f"Prediction failed: {str(e)}")
+
