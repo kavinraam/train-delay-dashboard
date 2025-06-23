@@ -40,7 +40,71 @@ schedule_df, delay_df = clean_data()
 
 section = st.sidebar.radio("Go to section:", ["EDA", "Route Performance", "Delay Prediction"])
 
-if section == "Delay Prediction":
+if section == "EDA":
+    st.header("Exploratory Data Analysis")
+
+    if not delay_df.empty and 'Train Type' in delay_df.columns and 'Day of the Week' in delay_df.columns:
+        st.subheader("Average Delay by Train Type")
+        train_type_delay = delay_df.groupby('Train Type')['Historical Delay (min)'].mean().reset_index()
+        fig1, ax1 = plt.subplots()
+        sns.barplot(data=train_type_delay, x='Train Type', y='Historical Delay (min)', ax=ax1, palette='Set2')
+        ax1.set_title("Average Delay (min) by Train Type")
+        st.pyplot(fig1)
+
+        st.subheader("Average Delay by Day of the Week")
+        ordered_days = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday']
+        delay_df['Day of the Week'] = pd.Categorical(delay_df['Day of the Week'], categories=ordered_days, ordered=True)
+        daywise = delay_df.groupby('Day of the Week')['Historical Delay (min)'].mean().reset_index()
+        fig2, ax2 = plt.subplots()
+        sns.lineplot(data=daywise, x='Day of the Week', y='Historical Delay (min)', marker='o', ax=ax2)
+        ax2.set_title("Avg Delay by Day")
+        st.pyplot(fig2)
+
+        st.subheader("On-Time Percentage by Train Type")
+        ontime_by_type = delay_df.groupby('Train Type')['On_Time'].mean().reset_index()
+        ontime_by_type['On_Time (%)'] = ontime_by_type['On_Time'] * 100
+        fig3, ax3 = plt.subplots()
+        sns.barplot(data=ontime_by_type, x='Train Type', y='On_Time (%)', ax=ax3, palette='YlGn')
+        ax3.set_title("On-Time % by Train Type")
+        ax3.set_ylim(0, 100)
+        st.pyplot(fig3)
+
+        st.subheader("On-Time Percentage by Day of the Week")
+        ontime_by_day = delay_df.groupby('Day of the Week')['On_Time'].mean().reset_index()
+        ontime_by_day['On_Time (%)'] = ontime_by_day['On_Time'] * 100
+        fig4, ax4 = plt.subplots()
+        sns.lineplot(data=ontime_by_day, x='Day of the Week', y='On_Time (%)', marker='o', color='green', ax=ax4)
+        ax4.set_title("On-Time % by Day")
+        ax4.set_ylim(0, 100)
+        st.pyplot(fig4)
+    else:
+        st.warning("Required columns missing in delay data for EDA.")
+
+elif section == "Route Performance":
+    st.header("Route Performance Metrics")
+
+    if not schedule_df.empty and 'Train_No' in schedule_df.columns and 'Station_Code' in schedule_df.columns:
+        st.subheader("Number of Stops per Train")
+        stops = schedule_df.groupby('Train_No')['Station_Code'].count().reset_index(name='Num_Stops')
+        top_stops = stops.sort_values(by='Num_Stops', ascending=False).head(10)
+        fig5, ax5 = plt.subplots()
+        sns.barplot(data=top_stops, x='Train_No', y='Num_Stops', ax=ax5, palette='Blues')
+        ax5.set_title("Top 10 Trains with Most Stops")
+        st.pyplot(fig5)
+
+    if 'Distance' in schedule_df.columns:
+        st.subheader("Longest Distance Trains")
+        distance_df = schedule_df.groupby('Train_No')['Distance'].last().reset_index()
+        distance_df['Distance'] = pd.to_numeric(distance_df['Distance'], errors='coerce')
+        top_distance = distance_df.sort_values(by='Distance', ascending=False).head(10)
+        fig6, ax6 = plt.subplots()
+        sns.barplot(data=top_distance, x='Train_No', y='Distance', ax=ax6, palette='Purples')
+        ax6.set_title("Top 10 Longest Distance Trains")
+        st.pyplot(fig6)
+    else:
+        st.warning("Distance column not found in schedule data.")
+
+elif section == "Delay Prediction":
     st.header("Train Delay Prediction")
 
     delay_model_df = delay_df.copy()
@@ -59,7 +123,6 @@ if section == "Delay Prediction":
 
     st.subheader("Enter Train Conditions")
 
-    # ✅ Use 'Train_No' instead of 'Train Number'
     if 'Train_No' in info_df.columns:
         train_no_list = sorted(info_df['Train_No'].dropna().astype(str).unique())
         selected_train = st.selectbox("Select Train Number (optional)", ["Manual Entry"] + list(train_no_list))
@@ -74,7 +137,6 @@ if section == "Delay Prediction":
         try:
             train_data = info_df[info_df['Train_No'].astype(str) == selected_train].iloc[0]
             default_type = train_data.get('Type', None)
-
             distance_value = schedule_df[schedule_df['Train_No'].astype(str) == selected_train]['Distance'].max()
             default_distance = int(distance_value) if not pd.isna(distance_value) else 200
         except Exception as e:
@@ -117,4 +179,3 @@ if section == "Delay Prediction":
 
         except Exception as e:
             st.error(f"Prediction failed: {str(e)}")
-
