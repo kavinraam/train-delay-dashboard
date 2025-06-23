@@ -30,3 +30,8 @@ The dashboard enables railway authorities to explore historical train delay patt
 ## License
 
 This project was developed as part of a internship at CRIS (Centre for Railway Information Systems). Not an official CRIS product, This project is intended for educational and research purposes only.
+
+## Author
+
+Kavin Raam M
+LinkedIn: linkedin.com/in/kavinraam
