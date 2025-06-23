@@ -16,6 +16,7 @@ from PIL import Image
 st.set_page_config(page_title="Train Delay Dashboard", layout="wide")
 
 cris_logo = Image.open("logo_cris.png")
+st.image(cris_logo, width=150)
 st.title("Train Delay Analysis & Prediction Dashboard")
 
 @st.cache_data
