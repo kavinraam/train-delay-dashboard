@@ -8,8 +8,9 @@ import streamlit as st
 import pandas as pd
 import seaborn as sns
 import matplotlib.pyplot as plt
-import joblib
 from sklearn.preprocessing import LabelEncoder
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.model_selection import train_test_split
 import numpy as np
 from PIL import Image
 
@@ -39,71 +40,7 @@ schedule_df, delay_df = clean_data()
 
 section = st.sidebar.radio("Go to section:", ["EDA", "Route Performance", "Delay Prediction"])
 
-if section == "EDA":
-    st.header("Exploratory Data Analysis")
-
-    st.subheader("Average Delay by Train Type")
-    train_type_delay = delay_df.groupby('Train Type')['Historical Delay (min)'].mean().reset_index()
-    fig1, ax1 = plt.subplots()
-    sns.barplot(data=train_type_delay, x='Train Type', y='Historical Delay (min)', ax=ax1, palette='Set2')
-    ax1.set_title("Average Delay (min) by Train Type")
-    st.pyplot(fig1)
-
-    st.subheader("Average Delay by Day of the Week")
-    ordered_days = ['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday']
-    delay_df['Day of the Week'] = pd.Categorical(delay_df['Day of the Week'], categories=ordered_days, ordered=True)
-    daywise = delay_df.groupby('Day of the Week')['Historical Delay (min)'].mean().reset_index()
-    fig2, ax2 = plt.subplots()
-    sns.lineplot(data=daywise, x='Day of the Week', y='Historical Delay (min)', marker='o', ax=ax2)
-    ax2.set_title("Avg Delay by Day")
-    st.pyplot(fig2)
-
-    st.subheader("On-Time Percentage by Train Type")
-    ontime_by_type = delay_df.groupby('Train Type')['On_Time'].mean().reset_index()
-    ontime_by_type['On_Time (%)'] = ontime_by_type['On_Time'] * 100
-    fig3, ax3 = plt.subplots()
-    sns.barplot(data=ontime_by_type, x='Train Type', y='On_Time (%)', ax=ax3, palette='YlGn')
-    ax3.set_title("On-Time % by Train Type")
-    ax3.set_ylim(0, 100)
-    st.pyplot(fig3)
-
-    st.subheader("On-Time Percentage by Day of the Week")
-    ontime_by_day = delay_df.groupby('Day of the Week')['On_Time'].mean().reset_index()
-    ontime_by_day['On_Time (%)'] = ontime_by_day['On_Time'] * 100
-    fig4, ax4 = plt.subplots()
-    sns.lineplot(data=ontime_by_day, x='Day of the Week', y='On_Time (%)', marker='o', color='green', ax=ax4)
-    ax4.set_title("On-Time % by Day")
-    ax4.set_ylim(0, 100)
-    st.pyplot(fig4)
-
-elif section == "Route Performance":
-    st.header("Route Performance Metrics")
-
-    st.subheader("Train Route Summary")
-
-    route_summary = schedule_df.groupby('Train_No').agg(
-        Number_of_Stops=('Station_Code', 'count'),
-        Total_Distance=('Distance', 'max'),
-        Start_Station=('Station_Code', 'first'),
-        End_Station=('Station_Code', 'last')
-    ).reset_index()
-
-    merged_df = pd.merge(info_df, route_summary, left_on='Train Number', right_on='Train_No', how='inner')
-
-    st.write("### Top 10 Longest Routes")
-    top_routes = merged_df.sort_values(by="Total_Distance", ascending=False).head(10)
-    st.dataframe(top_routes[['Train Number', 'Train Name', 'Type', 'Start_Station', 'End_Station', 'Total_Distance']])
-
-    st.write("### Top 10 Trains by Number of Stops")
-    top_stops = merged_df.sort_values(by="Number_of_Stops", ascending=False).head(10)
-    st.dataframe(top_stops[['Train Number', 'Train Name', 'Type', 'Number_of_Stops']])
-
-    st.write("### Average Stops by Train Type")
-    stops_chart = merged_df.groupby("Type")["Number_of_Stops"].mean().sort_values()
-    st.bar_chart(stops_chart)
-
-
-elif section == "Delay Prediction":
+if section == "Delay Prediction":
     st.header("Train Delay Prediction")
 
     delay_model_df = delay_df.copy()
@@ -114,9 +51,6 @@ elif section == "Delay Prediction":
         delay_model_df[col] = le.fit_transform(delay_model_df[col])
         label_encoders[col] = le
 
-    from sklearn.ensemble import RandomForestRegressor
-    from sklearn.model_selection import train_test_split
-
     X = delay_model_df.drop(columns=['Historical Delay (min)', 'On_Time'])
     y = delay_model_df['Historical Delay (min)']
     X_train, X_test, y_train, y_test = train_test_split(X, y, random_state=42)
@@ -124,6 +58,22 @@ elif section == "Delay Prediction":
     model.fit(X_train, y_train)
 
     st.subheader("Enter Train Conditions")
+
+    train_no_list = sorted(info_df['Train Number'].dropna().astype(str).unique())
+    selected_train = st.selectbox("Select Train Number (optional)", ["Manual Entry"] + list(train_no_list))
+
+    default_type = None
+    default_distance = 200
+
+    if selected_train != "Manual Entry":
+        try:
+            train_data = info_df[info_df['Train Number'].astype(str) == selected_train].iloc[0]
+            default_type = train_data.get('Type', None)
+            default_distance = schedule_df[schedule_df['Train_No'].astype(str) == selected_train]['Distance'].max()
+            if pd.isna(default_distance):
+                default_distance = 200
+        except:
+            st.warning("Train details not found. Please proceed with manual inputs.")
 
     col1, col2, col3 = st.columns(3)
 
@@ -133,11 +83,13 @@ elif section == "Delay Prediction":
 
     with col2:
         time_of_day = st.selectbox("Time of Day", label_encoders['Time of Day'].classes_)
-        train_type = st.selectbox("Train Type", label_encoders['Train Type'].classes_)
+        train_type = st.selectbox("Train Type", label_encoders['Train Type'].classes_,
+                                  index=list(label_encoders['Train Type'].classes_).index(default_type)
+                                  if default_type in label_encoders['Train Type'].classes_ else 0)
 
     with col3:
         congestion = st.selectbox("Route Congestion", label_encoders['Route Congestion'].classes_)
-        distance = st.slider("Distance (km)", 10, 1000, 200)
+        distance = st.slider("Distance (km)", 10, 1000, int(default_distance))
 
     if st.button("Predict Delay"):
         try:
@@ -158,4 +110,3 @@ elif section == "Delay Prediction":
 
         except Exception as e:
             st.error(f"Prediction failed: {str(e)}")
-
